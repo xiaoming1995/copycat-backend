@@ -1,0 +1,19 @@
+server:
+  port: 8088
+
+app:
+  env: prod
+  name: copycat
+
+database:
+  host: db
+  port: 5432
+  user: postgres
+  password: 123456
+  dbname: copycat
+  sslmode: disable
+  timezone: Asia/Shanghai
+
+jwt:
+  secret: your-jwt-secret-change-in-production
+  expire_hours: 72

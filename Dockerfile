@@ -28,9 +28,10 @@ WORKDIR /root/
 
 # Copy the binary from builder
 COPY --from=builder /app/main .
-# Copy config and prompts
-COPY --from=builder /app/config ./config
+# Copy prompts
 COPY --from=builder /app/prompts ./prompts
+# Copy Docker-specific config (not the local one)
+COPY --from=builder /app/config/config.docker.yaml ./config/config.yaml
 
 EXPOSE 8088
 
