@@ -3,10 +3,13 @@ FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
+# 使用国内 Go 代理加速依赖下载
+ENV GOPROXY=https://goproxy.cn,direct
+
 # Install build dependencies
 RUN apk add --no-cache gcc musl-dev
 
-# Copy dependency files
+# Copy dependency files first (利用 Docker 层缓存)
 COPY go.mod go.sum ./
 RUN go mod download
 
