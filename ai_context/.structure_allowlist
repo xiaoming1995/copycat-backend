@@ -1,0 +1,40 @@
+# === Project CopyCat Allowlist ===
+# ⚠️ Agent 只能在以下目录创建文件
+# 格式说明: 每一行代表一个允许写入的路径规则
+
+# 1. 核心应用层
+cmd/server/*
+
+# 2. 配置层
+config/*
+
+# 3. 接口层 (Interface Layer)
+internal/api/handler/*
+internal/api/middleware/*
+internal/api/router.go
+
+# 4. 核心业务层 (Core Business Layer)
+internal/core/agent/*
+internal/core/crawler/*
+internal/core/llm/*
+
+# 5. 数据层 (Data Access Layer)
+internal/model/*
+internal/repository/*
+
+# 6. 公共库 (Shared Packages)
+pkg/logger/*
+pkg/response/*
+pkg/utils/*
+
+# 7. 根目录文件
+go.mod
+go.sum
+Makefile
+Dockerfile
+README.md
+
+# 8. 文档与脚本
+docs/*
+scripts/*
+.ai_context/*
