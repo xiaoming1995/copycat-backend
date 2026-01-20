@@ -44,7 +44,7 @@ func InitDatabase(cfg *DatabaseConfig) (*gorm.DB, error) {
 	sqlDB.SetConnMaxLifetime(time.Hour) // 连接最大生命周期
 
 	DB = db
-	log.Println("✅ Database connected successfully")
+	log.Println("Database connected successfully")
 
 	return db, nil
 }
@@ -54,6 +54,6 @@ func AutoMigrate(db *gorm.DB, models ...interface{}) error {
 	if err := db.AutoMigrate(models...); err != nil {
 		return fmt.Errorf("failed to auto migrate: %w", err)
 	}
-	log.Println("✅ Database migration completed")
+	log.Println("Database migration completed")
 	return nil
 }

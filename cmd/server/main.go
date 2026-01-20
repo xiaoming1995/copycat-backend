@@ -20,12 +20,12 @@ func main() {
 	// 2. 初始化文件日志
 	logDir := "logs"
 	if err := logger.InitFileLogger(logDir, logger.DEBUG); err != nil {
-		log.Printf("⚠️ 初始化文件日志失败: %v，继续使用控制台日志", err)
+		log.Printf("初始化文件日志失败: %v，继续使用控制台日志", err)
 	} else {
 		defer logger.Close()
 	}
 
-	log.Printf("🚀 Starting %s in %s mode...", cfg.App.Name, cfg.App.Env)
+	log.Printf("Starting %s in %s mode...", cfg.App.Name, cfg.App.Env)
 
 	// 3. 初始化数据库
 	db, err := config.InitDatabase(&cfg.Database)
@@ -43,9 +43,9 @@ func main() {
 
 	// 6. 启动服务
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
-	log.Printf("🌐 Server listening on http://localhost%s", addr)
-	log.Printf("📚 API Documentation: http://localhost%s/api/v1", addr)
-	log.Printf("📝 日志文件: %s", logger.GetLogFilePath(logDir))
+	log.Printf("Server listening on http://localhost%s", addr)
+	log.Printf("API Documentation: http://localhost%s/api/v1", addr)
+	log.Printf("日志文件: %s", logger.GetLogFilePath(logDir))
 
 	if err := r.Run(addr); err != nil {
 		log.Fatalf("Failed to start server: %v", err)

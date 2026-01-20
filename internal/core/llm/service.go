@@ -9,74 +9,74 @@ import (
 	"strings"
 )
 
-// 件径
+// 提示词文件路径
 const (
 	PromptsDir         = "prompts"
 	AnalyzePromptFile  = "analyze.txt"
 	GeneratePromptFile = "generate.txt"
 )
 
-// 默诈件存时使稉
-var defaultAnalyzePrompt = `是爆款案分析家。分析红/媒案爆款逻辑。
+// 默认提示词模板，当文件不存在时使用
+var defaultAnalyzePrompt = `你是一位爆款文案分析专家。请分析以下小红书/社交媒体文案的爆款逻辑。
 
-题
+标题：
 {{title}}
 
-案容
+文案内容：
 {{content}}
 
-JSON 回分析
+请用 JSON 格式回复分析结果：
 {
   "title_analysis": {
-    "original": "题",
-    "hooks": ["点1", "点2"],
-    "techniques": ["使技"],
+    "original": "原始标题",
+    "hooks": ["钩子点1", "钩子点2"],
+    "techniques": ["使用的技巧"],
     "score": 8
   },
   "emotion": {
-    "primary": "绪",
+    "primary": "主要情绪",
     "intensity": 0.8,
-    "tags": ["绪签1", "绪签2", "绪签3"]
+    "tags": ["情绪标签1", "情绪标签2", "情绪标签3"]
   },
   "structure": [
-    {"title": "篇", "description": "分析这部分容"}
+    {"title": "开篇", "description": "分析这部分内容"}
   ],
-  "keywords": ["1", "2", "3"],
-  "tone": "语风",
-  "word_count": 案字数
+  "keywords": ["关键词1", "关键词2", "关键词3"],
+  "tone": "语气风格",
+  "word_count": 文案字数
 }
 
-回 JSON字。`
+请只回复 JSON，不要其他文字。`
 
-var defaultGeneratePrompt = `是爆款案创家。案分析题创篇仿写案。
+var defaultGeneratePrompt = `你是一位爆款文案创作专家。请根据原文案分析和新主题，创作一篇仿写文案。
 
-题
+原标题：
 {{title}}
 
-案
+原文案：
 {{content}}
 
-案分析
+文案分析：
 {{analysis}}
 
-题{{topic}}
+新主题：{{topic}}
 
-创篇案写风构逻辑案含题正。
+请创作一篇新文案，保持原文的写作风格、结构和爆款逻辑。文案应包含标题和正文。
 
-出
-【题】xxx
-【正】
+输出格式：
+【标题】xxx
+【正文】
 xxx`
 
-// TitleAnalysis 题分析
+// TitleAnalysis 标题分析结果
 type TitleAnalysis struct {
-	Original   string   `json:"original"`   // 题
-	Hooks      []string `json:"hooks"`      // 点
-	Techniques []string `json:"techniques"` // 使技
+	Original   string   `json:"original"`   // 原始标题
+	Hooks      []string `json:"hooks"`      // 钩子点
+	Techniques []string `json:"techniques"` // 使用的技巧
 	Score      int      `json:"score"`      // 评分
 }
 
-// AnalysisResult 分析
+// AnalysisResult 分析结果
 type AnalysisResult struct {
 	TitleAnalysis *TitleAnalysis  `json:"title_analysis,omitempty"`
 	Emotion       EmotionAnalysis `json:"emotion"`
@@ -86,54 +86,54 @@ type AnalysisResult struct {
 	WordCount     int             `json:"word_count"`
 }
 
-// EmotionAnalysis 绪分析
+// EmotionAnalysis 情绪分析
 type EmotionAnalysis struct {
-	Primary   string   `json:"primary"`   // 绪
-	Intensity float64  `json:"intensity"` // 绪0-1
-	Tags      []string `json:"tags"`      // 绪签
+	Primary   string   `json:"primary"`   // 主要情绪
+	Intensity float64  `json:"intensity"` // 情绪强度 0-1
+	Tags      []string `json:"tags"`      // 情绪标签
 }
 
-// StructureItem 构分析项
+// StructureItem 结构分析项
 type StructureItem struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
 }
 
-// loadPrompt 从件载件存则使默
+// loadPrompt 从文件加载提示词，文件不存在则使用默认值
 func loadPrompt(filename string, defaultPrompt string) string {
 	promptPath := filepath.Join(PromptsDir, filename)
 
 	content, err := os.ReadFile(promptPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Printf("[Prompt] 件存: %s使默模", promptPath)
+			log.Printf("[Prompt] 提示词文件不存在: %s，使用默认模板", promptPath)
 		} else {
-			log.Printf("[Prompt] 读件: %v使默模", err)
+			log.Printf("[Prompt] 读取提示词文件失败: %v，使用默认模板", err)
 		}
 		return defaultPrompt
 	}
 
-	log.Printf("[Prompt] 载件: %s (%d 字)", promptPath, len(content))
+	log.Printf("[Prompt] 已加载提示词文件: %s (%d 字符)", promptPath, len(content))
 	return string(content)
 }
 
-// AnalyzeContent 分析爆款容
+// AnalyzeContent 分析爆款内容
 func (c *Client) AnalyzeContent(title, content string) (*AnalysisResult, error) {
-	log.Printf(" [LLM Service] 分析容 (题: %d 字, 正: %d 字)", len(title), len(content))
+	log.Printf("[LLM Service] 开始分析内容 (标题: %d 字, 正文: %d 字)", len(title), len(content))
 
 	if title != "" {
-		log.Printf("   - 题: %s", title)
+		log.Printf("   - 标题: %s", title)
 	}
 	contentPreview := content
 	if len(contentPreview) > 100 {
 		contentPreview = contentPreview[:100] + "..."
 	}
-	log.Printf("   - 容预览: %s", strings.ReplaceAll(contentPreview, "\n", " "))
+	log.Printf("   - 内容预览: %s", strings.ReplaceAll(contentPreview, "\n", " "))
 
-	// 从件载模
+	// 从文件加载提示词模板
 	promptTemplate := loadPrompt(AnalyzePromptFile, defaultAnalyzePrompt)
 
-	// 替
+	// 替换占位符
 	prompt := strings.ReplaceAll(promptTemplate, "{{title}}", title)
 	prompt = strings.ReplaceAll(prompt, "{{content}}", content)
 
@@ -143,13 +143,13 @@ func (c *Client) AnalyzeContent(title, content string) (*AnalysisResult, error) 
 
 	response, err := c.Chat(messages)
 	if err != nil {
-		log.Printf("[LLM Service] 分析: %v", err)
-		return nil, fmt.Errorf("调 LLM : %w", err)
+		log.Printf("[LLM Service] 分析失败: %v", err)
+		return nil, fmt.Errorf("调用 LLM 失败: %w", err)
 	}
 
-	// 试JSON
+	// 尝试提取 JSON
 	jsonStr := extractJSON(response)
-	log.Printf("[LLM Service]  JSON (长: %d):", len(jsonStr))
+	log.Printf("[LLM Service] 提取的 JSON (长度: %d):", len(jsonStr))
 	jsonPreview := jsonStr
 	if len(jsonPreview) > 500 {
 		jsonPreview = jsonPreview[:500] + "..."
@@ -158,39 +158,39 @@ func (c *Client) AnalyzeContent(title, content string) (*AnalysisResult, error) 
 
 	var result AnalysisResult
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
-		log.Printf("[LLM Service] JSON 解析: %v", err)
-		log.Printf("   : %s", response)
-		return nil, fmt.Errorf("解析分析: %w, : %s", err, response)
+		log.Printf("[LLM Service] JSON 解析失败: %v", err)
+		log.Printf("   原始响应: %s", response)
+		return nil, fmt.Errorf("解析分析结果失败: %w, 原始响应: %s", err, response)
 	}
 
-	log.Printf("[LLM Service] 分析成:")
+	log.Printf("[LLM Service] 分析成功:")
 	if result.TitleAnalysis != nil {
-		log.Printf("   - 题评分: %d/10", result.TitleAnalysis.Score)
-		log.Printf("   - 题技: %v", result.TitleAnalysis.Techniques)
+		log.Printf("   - 标题评分: %d/10", result.TitleAnalysis.Score)
+		log.Printf("   - 标题技巧: %v", result.TitleAnalysis.Techniques)
 	}
-	log.Printf("   - 绪: %s (: %.2f)", result.Emotion.Primary, result.Emotion.Intensity)
-	log.Printf("   - 绪签: %v", result.Emotion.Tags)
-	log.Printf("   - 构段落: %d ", len(result.Structure))
-	log.Printf("   - : %v", result.Keywords)
-	log.Printf("   - 语风: %s", result.Tone)
-	log.Printf("   - 字数计: %d", result.WordCount)
+	log.Printf("   - 主要情绪: %s (强度: %.2f)", result.Emotion.Primary, result.Emotion.Intensity)
+	log.Printf("   - 情绪标签: %v", result.Emotion.Tags)
+	log.Printf("   - 结构段落: %d 个", len(result.Structure))
+	log.Printf("   - 关键词: %v", result.Keywords)
+	log.Printf("   - 语气风格: %s", result.Tone)
+	log.Printf("   - 字数统计: %d", result.WordCount)
 
 	return &result, nil
 }
 
-// GenerateContent 成仿写案
+// GenerateContent 生成仿写文案
 func (c *Client) GenerateContent(originalTitle, originalContent string, analysisResult *AnalysisResult, newTopic string) (string, error) {
-	log.Printf("[LLM Service] 成仿写案")
-	log.Printf("   - 题: %s", newTopic)
-	log.Printf("   - 题: %s", originalTitle)
-	log.Printf("   - 长: %d 字", len(originalContent))
+	log.Printf("[LLM Service] 开始生成仿写文案")
+	log.Printf("   - 新主题: %s", newTopic)
+	log.Printf("   - 原标题: %s", originalTitle)
+	log.Printf("   - 原文长度: %d 字", len(originalContent))
 
 	analysisJSON, _ := json.MarshalIndent(analysisResult, "", "  ")
 
-	// 从件载模
+	// 从文件加载提示词模板
 	promptTemplate := loadPrompt(GeneratePromptFile, defaultGeneratePrompt)
 
-	// 替
+	// 替换占位符
 	prompt := strings.ReplaceAll(promptTemplate, "{{title}}", originalTitle)
 	prompt = strings.ReplaceAll(prompt, "{{content}}", originalContent)
 	prompt = strings.ReplaceAll(prompt, "{{analysis}}", string(analysisJSON))
@@ -202,24 +202,24 @@ func (c *Client) GenerateContent(originalTitle, originalContent string, analysis
 
 	response, err := c.Chat(messages)
 	if err != nil {
-		log.Printf("[LLM Service] 成: %v", err)
-		return "", fmt.Errorf("调 LLM : %w", err)
+		log.Printf("[LLM Service] 生成失败: %v", err)
+		return "", fmt.Errorf("调用 LLM 失败: %w", err)
 	}
 
 	result := strings.TrimSpace(response)
-	log.Printf("[LLM Service] 成成(长: %d 字)", len(result))
+	log.Printf("[LLM Service] 生成成功 (长度: %d 字符)", len(result))
 	resultPreview := result
 	if len(resultPreview) > 200 {
 		resultPreview = resultPreview[:200] + "..."
 	}
-	log.Printf("   - 成容预览: %s", strings.ReplaceAll(resultPreview, "\n", " "))
+	log.Printf("   - 生成内容预览: %s", strings.ReplaceAll(resultPreview, "\n", " "))
 
 	return result, nil
 }
 
-// extractJSON 从JSON
+// extractJSON 从文本中提取 JSON
 func extractJSON(text string) string {
-	// 试找到 JSON 置
+	// 尝试找到 JSON 的起始和结束位置
 	start := strings.Index(text, "{")
 	end := strings.LastIndex(text, "}")
 
@@ -230,84 +230,84 @@ func extractJSON(text string) string {
 	return text
 }
 
-// ========== 图片分析 ==========
+// ========== 图片分析功能 ==========
 
 const AnalyzeImagePromptFile = "analyze_image.txt"
 
-var defaultAnalyzeImagePrompt = `是视觉容分析家。分析图片视觉特点创。
+var defaultAnalyzeImagePrompt = `你是一位视觉内容分析专家。请分析以下图片的视觉特点和创意技巧。
 
-JSON 回分析
+请用 JSON 格式回复分析结果：
 {
   "images": [
     {
       "index": 1,
       "composition": "构图分析",
-      "technique": "摄/设计",
+      "technique": "拍摄/设计技巧",
       "highlight": "视觉爆点",
-      "color_tone": "色调风",
-      "mood": "达绪/氛围"
+      "color_tone": "色调风格",
+      "mood": "表达的情绪/氛围"
     }
   ],
-  "overall_style": "整视觉风总",
-  "visual_strategy": "视觉分析"
+  "overall_style": "整体视觉风格总结",
+  "visual_strategy": "视觉策略分析"
 }
 
-回 JSON字。`
+请只回复 JSON，不要其他文字。`
 
-// ImageAnalysisItem 图片分析
+// ImageAnalysisItem 单张图片分析结果
 type ImageAnalysisItem struct {
 	Index       int    `json:"index"`
 	Composition string `json:"composition"`  // 构图分析
-	Technique   string `json:"technique"`    // 摄
+	Technique   string `json:"technique"`    // 拍摄技巧
 	Highlight   string `json:"highlight"`    // 视觉爆点
-	ColorTone   string `json:"color_tone"`   // 色调风
-	Mood        string `json:"mood"`         // 绪氛围
-	ImagePrompt string `json:"image_prompt"` // AI图成
+	ColorTone   string `json:"color_tone"`   // 色调风格
+	Mood        string `json:"mood"`         // 情绪氛围
+	ImagePrompt string `json:"image_prompt"` // AI 图像生成提示词
 }
 
-// ImageAnalysisResult 图片分析
+// ImageAnalysisResult 图片分析结果
 type ImageAnalysisResult struct {
 	Images         []ImageAnalysisItem `json:"images"`
-	OverallStyle   string              `json:"overall_style"`   // 整风
-	VisualStrategy string              `json:"visual_strategy"` // 视觉
+	OverallStyle   string              `json:"overall_style"`   // 整体风格
+	VisualStrategy string              `json:"visual_strategy"` // 视觉策略
 }
 
-// AnalyzeImages 分析图片容模态
+// AnalyzeImages 分析图片内容（多模态）
 func (c *Client) AnalyzeImages(imageURLs []string) (*ImageAnalysisResult, error) {
 	if len(imageURLs) == 0 {
-		return nil, fmt.Errorf("没供图片")
+		return nil, fmt.Errorf("没有提供图片")
 	}
 
-	log.Printf("[LLM Service] 分析图片 (数: %d)", len(imageURLs))
+	log.Printf("[LLM Service] 开始分析图片 (数量: %d)", len(imageURLs))
 	for i, url := range imageURLs {
 		log.Printf("   - 图片 %d: %s", i+1, url)
 	}
 
-	// 从件载模
+	// 从文件加载提示词模板
 	promptTemplate := loadPrompt(AnalyzeImagePromptFile, defaultAnalyzeImagePrompt)
 
-	// 调模态
+	// 调用多模态接口
 	response, err := c.ChatWithImages(promptTemplate, imageURLs)
 	if err != nil {
-		log.Printf("[LLM Service] 图片分析: %v", err)
-		return nil, fmt.Errorf("调模态 LLM : %w", err)
+		log.Printf("[LLM Service] 图片分析失败: %v", err)
+		return nil, fmt.Errorf("调用多模态 LLM 失败: %w", err)
 	}
 
-	// JSON
+	// 提取 JSON
 	jsonStr := extractJSON(response)
-	log.Printf("[LLM Service] 图片分析 JSON (长: %d)", len(jsonStr))
+	log.Printf("[LLM Service] 图片分析 JSON (长度: %d)", len(jsonStr))
 
 	var result ImageAnalysisResult
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
-		log.Printf("[LLM Service] 图片分析 JSON 解析: %v", err)
-		log.Printf("   : %s", response)
-		return nil, fmt.Errorf("解析图片分析: %w", err)
+		log.Printf("[LLM Service] 图片分析 JSON 解析失败: %v", err)
+		log.Printf("   原始响应: %s", response)
+		return nil, fmt.Errorf("解析图片分析结果失败: %w", err)
 	}
 
-	log.Printf("[LLM Service] 图片分析成:")
-	log.Printf("   - 分析图片数: %d", len(result.Images))
-	log.Printf("   - 整风: %s", result.OverallStyle)
-	log.Printf("   - 视觉: %s", result.VisualStrategy)
+	log.Printf("[LLM Service] 图片分析成功:")
+	log.Printf("   - 分析图片数量: %d", len(result.Images))
+	log.Printf("   - 整体风格: %s", result.OverallStyle)
+	log.Printf("   - 视觉策略: %s", result.VisualStrategy)
 
 	return &result, nil
 }

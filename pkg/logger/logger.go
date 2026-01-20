@@ -83,7 +83,7 @@ func InitFileLogger(logDir string, level Level) error {
 	log.SetOutput(multiWriter)
 	log.SetFlags(flags)
 
-	log.Printf("📝 日志文件已启用: %s", logFilePath)
+	log.Printf("日志文件已启用: %s", logFilePath)
 	return nil
 }
 
