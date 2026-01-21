@@ -27,8 +27,18 @@ type UserSettings struct {
 	VideoLLMModel    string `gorm:"column:video_llm_model;type:varchar(100);default:gpt-4o;comment:视频LLM模型名称" json:"video_llm_model"`
 	VideoLLMBaseURL  string `gorm:"column:video_llm_base_url;type:varchar(500);comment:视频LLM API基础URL" json:"video_llm_base_url"`
 
+	// 各提供商 API Key（所有分析类型共享）
+	OpenAIApiKey    string `gorm:"column:openai_api_key;type:varchar(500);comment:OpenAI API密钥" json:"openai_api_key"`
+	DeepSeekApiKey  string `gorm:"column:deepseek_api_key;type:varchar(500);comment:DeepSeek API密钥" json:"deepseek_api_key"`
+	MoonshotApiKey  string `gorm:"column:moonshot_api_key;type:varchar(500);comment:Moonshot API密钥" json:"moonshot_api_key"`
+	QwenApiKey      string `gorm:"column:qwen_api_key;type:varchar(500);comment:通义千问 API密钥" json:"qwen_api_key"`
+	HunyuanApiKey   string `gorm:"column:hunyuan_api_key;type:varchar(500);comment:腾讯混元 API密钥" json:"hunyuan_api_key"`
+	DoubaoApiKey    string `gorm:"column:doubao_api_key;type:varchar(500);comment:豆包 API密钥" json:"doubao_api_key"`
+	ZhipuApiKey     string `gorm:"column:zhipu_api_key;type:varchar(500);comment:智谱 API密钥" json:"zhipu_api_key"`
+	AnthropicApiKey string `gorm:"column:anthropic_api_key;type:varchar(500);comment:Anthropic API密钥" json:"anthropic_api_key"`
+
 	// 仿写生成配置
-	GenerateCount int `gorm:"column:generate_count;default:1;comment:一次生成的仿写条数(1-5)" json:"generate_count"`
+	GenerateCount int `gorm:"column:generate_count;default:1;comment:一次生成的仿写条数(1-10)" json:"generate_count"`
 
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime;comment:创建时间" json:"created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime;comment:更新时间" json:"updated_at"`

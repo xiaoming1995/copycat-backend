@@ -62,7 +62,9 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 
 			// 设置相关
 			auth.GET("/settings/llm", settingsHandler.GetLLMConfig)
-			auth.POST("/settings/llm", settingsHandler.SaveLLMConfig)
+			auth.POST("/settings/api-config", settingsHandler.SaveApiConfig)           // 模块1: API 配置
+			auth.POST("/settings/model-config", settingsHandler.SaveModelConfig)       // 模块2: 模型选择
+			auth.POST("/settings/generate-config", settingsHandler.SaveGenerateConfig) // 模块3: 生成设置
 
 			// 分析与生成相关
 			auth.POST("/analyze", analysisHandler.Analyze)
