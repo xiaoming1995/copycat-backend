@@ -23,10 +23,11 @@ func NewSettingsHandler(db *gorm.DB) *SettingsHandler {
 
 // LLMConfigItem 单个 LLM 配置
 type LLMConfigItem struct {
-	Provider string `json:"provider"`
-	ApiKey   string `json:"api_key"`
-	Model    string `json:"model"`
-	BaseURL  string `json:"base_url"`
+	Provider  string `json:"provider"`
+	ApiKey    string `json:"api_key"`
+	Model     string `json:"model"`
+	BaseURL   string `json:"base_url"`
+	BatchSize int    `json:"batch_size,omitempty"` // 仿写条数（仅用于文案分析）
 }
 
 // MultiModalConfigRequest 多模态配置请求
@@ -80,10 +81,11 @@ func (h *SettingsHandler) GetLLMConfig(c *gin.Context) {
 	// 返回配置（API Key 脱敏显示）
 	response.Success(c, MultiModalConfigResponse{
 		ContentAnalysis: LLMConfigItem{
-			Provider: settings.LLMProvider,
-			ApiKey:   maskApiKey(settings.LLMApiKey),
-			Model:    settings.LLMModel,
-			BaseURL:  settings.LLMBaseURL,
+			Provider:  settings.LLMProvider,
+			ApiKey:    maskApiKey(settings.LLMApiKey),
+			Model:     settings.LLMModel,
+			BaseURL:   settings.LLMBaseURL,
+			BatchSize: settings.GenerateCount,
 		},
 		ImageAnalysis: LLMConfigItem{
 			Provider: settings.ImageLLMProvider,
@@ -160,6 +162,8 @@ func (h *SettingsHandler) SaveLLMConfig(c *gin.Context) {
 		VideoLLMApiKey:   getApiKeyOrKeepExisting(req.VideoAnalysis.ApiKey, existing, "video"),
 		VideoLLMModel:    req.VideoAnalysis.Model,
 		VideoLLMBaseURL:  req.VideoAnalysis.BaseURL,
+		// 生成配置
+		GenerateCount: req.ContentAnalysis.BatchSize,
 	}
 
 	if err := h.settingsRepo.Upsert(settings); err != nil {

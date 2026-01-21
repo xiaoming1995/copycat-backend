@@ -11,6 +11,7 @@ import (
 type Project struct {
 	ID               uuid.UUID      `gorm:"column:id;type:uuid;primaryKey;default:gen_random_uuid();comment:项目唯一ID(UUID)" json:"id"`
 	UserID           int64          `gorm:"column:user_id;not null;index;comment:关联用户ID" json:"user_id"`
+	BatchTaskID      *uuid.UUID     `gorm:"column:batch_task_id;type:uuid;index;comment:关联批量任务ID(可选)" json:"batch_task_id,omitempty"`
 	SourceURL        string         `gorm:"column:source_url;type:text;comment:原始文案来源URL(小红书/公众号)" json:"source_url"`
 	SourceContent    string         `gorm:"column:source_content;type:text;not null;comment:爬取/输入的原始文案内容" json:"source_content"`
 	AnalysisResult   datatypes.JSON `gorm:"column:analysis_result;type:jsonb;comment:LLM分析结果(情绪/结构/关键词)" json:"analysis_result"`
@@ -20,8 +21,8 @@ type Project struct {
 	CreatedAt        time.Time      `gorm:"column:created_at;autoCreateTime;index:idx_projects_created_at,sort:desc;comment:创建时间" json:"created_at"`
 	UpdatedAt        time.Time      `gorm:"column:updated_at;autoUpdateTime;comment:更新时间" json:"updated_at"`
 
-	// 关联关系
-	User *User `gorm:"foreignKey:UserID" json:"user,omitempty"`
+	// 关联关系（仅用于代码层面加载，不创建数据库外键）
+	User *User `gorm:"-" json:"user,omitempty"`
 }
 
 // TableName 指定表名

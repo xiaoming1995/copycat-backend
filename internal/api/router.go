@@ -30,6 +30,7 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	crawlerHandler := handler.NewCrawlerHandler(contentService)
 	settingsHandler := handler.NewSettingsHandler(db)
 	analysisHandler := handler.NewAnalysisHandler(db)
+	batchHandler := handler.NewBatchHandler(db, contentService)
 
 	// API v1 路由组
 	v1 := r.Group("/api/v1")
@@ -67,6 +68,11 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 			auth.POST("/analyze", analysisHandler.Analyze)
 			auth.POST("/analyze-images", analysisHandler.AnalyzeImages)
 			auth.POST("/generate", analysisHandler.Generate)
+
+			// 批量任务相关
+			auth.POST("/batch/analyze", batchHandler.CreateBatchAnalyze)
+			auth.GET("/batch/:id", batchHandler.GetBatchStatus)
+			auth.GET("/batch/list", batchHandler.ListBatchTasks)
 		}
 	}
 

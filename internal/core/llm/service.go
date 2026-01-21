@@ -217,6 +217,65 @@ func (c *Client) GenerateContent(originalTitle, originalContent string, analysis
 	return result, nil
 }
 
+// GenerateMultipleContent 生成多条仿写文案
+func (c *Client) GenerateMultipleContent(originalTitle, originalContent string, analysisResult *AnalysisResult, newTopic string, count int) ([]string, error) {
+	if count <= 1 {
+		// 单条生成走原逻辑
+		content, err := c.GenerateContent(originalTitle, originalContent, analysisResult, newTopic)
+		if err != nil {
+			return nil, err
+		}
+		return []string{content}, nil
+	}
+
+	log.Printf("[LLM Service] 开始生成多条仿写文案 (条数: %d)", count)
+	log.Printf("   - 新主题: %s", newTopic)
+	log.Printf("   - 原标题: %s", originalTitle)
+
+	analysisJSON, _ := json.MarshalIndent(analysisResult, "", "  ")
+
+	// 从文件加载提示词模板
+	promptTemplate := loadPrompt(GeneratePromptFile, defaultGeneratePrompt)
+
+	// 替换占位符
+	prompt := strings.ReplaceAll(promptTemplate, "{{title}}", originalTitle)
+	prompt = strings.ReplaceAll(prompt, "{{content}}", originalContent)
+	prompt = strings.ReplaceAll(prompt, "{{analysis}}", string(analysisJSON))
+	prompt = strings.ReplaceAll(prompt, "{{topic}}", newTopic)
+
+	// 添加多条生成的指令
+	multiPrompt := fmt.Sprintf(`%s
+
+【重要】请生成 %d 条不同风格的仿写文案，每条之间用以下分隔符分开：
+
+===SEPARATOR===
+
+确保每条文案都有独特的表达方式和切入角度，但都要围绕"%s"这个主题。`, prompt, count, newTopic)
+
+	messages := []Message{
+		{Role: "user", Content: multiPrompt},
+	}
+
+	response, err := c.Chat(messages)
+	if err != nil {
+		log.Printf("[LLM Service] 多条生成失败: %v", err)
+		return nil, fmt.Errorf("调用 LLM 失败: %w", err)
+	}
+
+	// 分割多条内容
+	parts := strings.Split(response, "===SEPARATOR===")
+	results := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			results = append(results, trimmed)
+		}
+	}
+
+	log.Printf("[LLM Service] 多条生成成功 (实际条数: %d)", len(results))
+	return results, nil
+}
+
 // extractJSON 从文本中提取 JSON
 func extractJSON(text string) string {
 	// 尝试找到 JSON 的起始和结束位置

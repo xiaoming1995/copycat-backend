@@ -33,8 +33,8 @@ func main() {
 		log.Fatalf("Failed to connect database: %v", err)
 	}
 
-	// 4. 自动迁移
-	if err := config.AutoMigrate(db, &model.User{}, &model.Project{}, &model.UserSettings{}); err != nil {
+	// 4. 自动迁移（注意顺序：BatchTask 需要在 Project 之前，因为 Project 有外键引用 BatchTask）
+	if err := config.AutoMigrate(db, &model.User{}, &model.UserSettings{}, &model.BatchTask{}, &model.Project{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 

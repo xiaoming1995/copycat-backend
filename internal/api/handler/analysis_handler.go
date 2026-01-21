@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"strings"
 
 	"copycat/internal/core/llm"
 	"copycat/internal/model"
@@ -238,24 +239,38 @@ func (h *AnalysisHandler) Generate(c *gin.Context) {
 	if analysisResult.TitleAnalysis != nil {
 		originalTitle = analysisResult.TitleAnalysis.Original
 	}
-	generatedContent, err := client.GenerateContent(originalTitle, project.SourceContent, &analysisResult, req.NewTopic)
+
+	// 获取生成条数配置（默认1条）
+	generateCount := settings.GenerateCount
+	if generateCount <= 0 {
+		generateCount = 1
+	}
+	if generateCount > 10 {
+		generateCount = 10 // 最多10条
+	}
+	log.Printf("   - 生成条数: %d", generateCount)
+
+	generatedContents, err := client.GenerateMultipleContent(originalTitle, project.SourceContent, &analysisResult, req.NewTopic, generateCount)
 	if err != nil {
 		log.Printf("[API] 成: %v", err)
 		response.ServerError(c, "成: "+err.Error())
 		return
 	}
 
-	log.Printf("[API] 成成容长: %d 字", len(generatedContent))
+	log.Printf("[API] 成成容条数: %d", len(generatedContents))
 
-	// 更项目
+	// 更项目（保存第一条或全部内容）
 	project.NewTopic = req.NewTopic
-	project.GeneratedContent = generatedContent
+	if len(generatedContents) > 0 {
+		project.GeneratedContent = strings.Join(generatedContents, "\n\n===分隔符===\n\n")
+	}
 	project.Status = model.ProjectStatusCompleted
 	h.projectRepo.Update(context.Background(), project)
 	log.Printf("[API] 更项目成")
 
 	response.Success(c, gin.H{
-		"generated_content": generatedContent,
+		"generated_contents": generatedContents,
+		"generated_content":  generatedContents[0], // 兼容旧版本
 	})
 }
 

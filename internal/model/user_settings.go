@@ -27,6 +27,9 @@ type UserSettings struct {
 	VideoLLMModel    string `gorm:"column:video_llm_model;type:varchar(100);default:gpt-4o;comment:视频LLM模型名称" json:"video_llm_model"`
 	VideoLLMBaseURL  string `gorm:"column:video_llm_base_url;type:varchar(500);comment:视频LLM API基础URL" json:"video_llm_base_url"`
 
+	// 仿写生成配置
+	GenerateCount int `gorm:"column:generate_count;default:1;comment:一次生成的仿写条数(1-5)" json:"generate_count"`
+
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime;comment:创建时间" json:"created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime;comment:更新时间" json:"updated_at"`
 
