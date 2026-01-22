@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -143,18 +144,33 @@ func (c *XHSCrawler) parseContent(html, noteID, sourceURL string) (*NoteContent,
 		Tags:      []string{},
 	}
 
+	log.Printf("[XHS Crawler] 解析笔记: %s, HTML长度: %d", noteID, len(html))
+
 	// 方法1: 尝试从页面内嵌的 JSON 数据中提取
 	if err := c.extractFromJSON(html, content); err == nil && content.Content != "" {
+		log.Printf("[XHS Crawler] JSON提取成功: 标题=%s, 内容长度=%d", content.Title, len(content.Content))
 		return content, nil
+	} else if err != nil {
+		log.Printf("[XHS Crawler] JSON提取失败: %v", err)
 	}
 
 	// 方法2: 使用正则表达式提取
 	if err := c.extractFromHTML(html, content); err == nil && content.Content != "" {
+		log.Printf("[XHS Crawler] HTML提取成功: 标题=%s, 内容长度=%d", content.Title, len(content.Content))
 		return content, nil
+	} else if err != nil {
+		log.Printf("[XHS Crawler] HTML提取失败: %v", err)
 	}
 
 	// 如果都失败，返回基础信息
 	if content.Title == "" && content.Content == "" {
+		log.Printf("[XHS Crawler] 提取失败: 标题和内容都为空")
+		// 记录 HTML 的前 500 个字符用于调试
+		if len(html) > 500 {
+			log.Printf("[XHS Crawler] HTML 开头内容: %s...", html[:500])
+		} else {
+			log.Printf("[XHS Crawler] HTML 全部内容: %s", html)
+		}
 		return nil, fmt.Errorf("failed to extract content from page")
 	}
 
@@ -268,6 +284,56 @@ func (c *XHSCrawler) extractNoteFields(data map[string]interface{}, content *Not
 		}
 		if shareCount, ok := interactInfo["shareCount"].(string); ok {
 			content.ShareCount = c.parseCount(shareCount)
+		}
+	}
+
+	// 提取封面图
+	if cover, ok := data["cover"].(map[string]interface{}); ok {
+		if urlDefault, ok := cover["urlDefault"].(string); ok {
+			content.CoverURL = urlDefault
+		} else if url, ok := cover["url"].(string); ok {
+			content.CoverURL = url
+		}
+	}
+
+	// 提取视频信息（针对视频类型笔记）
+	if content.Type == "video" {
+		if video, ok := data["video"].(map[string]interface{}); ok {
+			videoInfo := &Video{}
+			// 尝试多种可能的视频 URL 字段
+			if media, ok := video["media"].(map[string]interface{}); ok {
+				if stream, ok := media["stream"].(map[string]interface{}); ok {
+					if h264, ok := stream["h264"].([]interface{}); ok && len(h264) > 0 {
+						if firstStream, ok := h264[0].(map[string]interface{}); ok {
+							if masterUrl, ok := firstStream["masterUrl"].(string); ok {
+								videoInfo.URL = masterUrl
+							}
+						}
+					}
+				}
+			}
+			// 备用：直接获取视频 URL
+			if videoInfo.URL == "" {
+				if url, ok := video["url"].(string); ok {
+					videoInfo.URL = url
+				} else if firstFrameUrl, ok := video["firstFrameUrl"].(string); ok {
+					content.CoverURL = firstFrameUrl
+				}
+			}
+			// 获取视频时长
+			if duration, ok := video["duration"].(float64); ok {
+				videoInfo.Duration = int(duration)
+			}
+			// 获取视频尺寸
+			if width, ok := video["width"].(float64); ok {
+				videoInfo.Width = int(width)
+			}
+			if height, ok := video["height"].(float64); ok {
+				videoInfo.Height = int(height)
+			}
+			if videoInfo.URL != "" || content.CoverURL != "" {
+				content.Video = videoInfo
+			}
 		}
 	}
 }

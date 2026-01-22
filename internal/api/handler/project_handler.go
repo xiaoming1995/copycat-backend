@@ -26,12 +26,14 @@ func NewProjectHandler(projectRepo repository.ProjectRepository) *ProjectHandler
 type CreateProjectRequest struct {
 	SourceURL     string `json:"source_url"`
 	SourceContent string `json:"source_content" binding:"required"`
+	ContentType   string `json:"content_type"` // text/video/images
 }
 
 // UpdateProjectRequest 更新项目请求
 type UpdateProjectRequest struct {
 	SourceURL        string `json:"source_url"`
 	SourceContent    string `json:"source_content"`
+	ContentType      string `json:"content_type"`
 	NewTopic         string `json:"new_topic"`
 	GeneratedContent string `json:"generated_content"`
 	Status           string `json:"status"`
@@ -61,10 +63,17 @@ func (h *ProjectHandler) Create(c *gin.Context) {
 
 	userID, _ := c.Get("userID")
 
+	// 设置默认 content_type
+	contentType := req.ContentType
+	if contentType == "" {
+		contentType = "text"
+	}
+
 	project := &model.Project{
 		UserID:        userID.(int64),
 		SourceURL:     req.SourceURL,
 		SourceContent: req.SourceContent,
+		ContentType:   contentType,
 		Status:        model.ProjectStatusDraft,
 	}
 

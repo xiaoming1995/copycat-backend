@@ -208,23 +208,31 @@ func (h *BatchHandler) processSingleURL(batchID uuid.UUID, userID int64, url str
 	// 3. 保存爬取结果（包括图片URL，以JSON格式保存供前端读取）
 	var title, content string
 	var images []string
+	var contentType string = "images" // 默认为图文类型
 	if result.Content != nil {
 		title = result.Content.Title
 		content = result.Content.Content
 		images = result.Content.Images
+
+		// 判断内容类型
+		if result.Content.Type == "video" {
+			contentType = "video"
+		}
 
 		// 将内容和图片以 JSON 格式保存，供前端读取
 		sourceData := map[string]interface{}{
 			"title":   title,
 			"content": content,
 			"images":  images,
+			"type":    result.Content.Type, // 保存原始类型
 		}
 		sourceJSON, _ := json.Marshal(sourceData)
 		project.SourceContent = string(sourceJSON)
+		project.ContentType = contentType // 设置项目内容类型
 	}
 
-	// 4. 调用文本 LLM 分析
-	log.Printf("[Batch] 开始文本分析: %s", url)
+	// 4. 调用 LLM 分析（根据内容类型选择不同分析方式）
+	log.Printf("[Batch] 开始分析: %s (类型: %s)", url, contentType)
 	textClient := llm.NewClient(llm.Config{
 		Provider: settings.LLMProvider,
 		ApiKey:   settings.LLMApiKey,
@@ -232,15 +240,22 @@ func (h *BatchHandler) processSingleURL(batchID uuid.UUID, userID int64, url str
 		BaseURL:  settings.LLMBaseURL,
 	})
 
-	analysisResult, err := textClient.AnalyzeContent(title, content)
+	var analysisResult *llm.AnalysisResult
+	if contentType == "video" {
+		// 视频类型使用视频分析
+		analysisResult, err = textClient.AnalyzeVideoContent(title, content)
+	} else {
+		// 图文类型使用普通分析
+		analysisResult, err = textClient.AnalyzeContent(title, content)
+	}
 	if err != nil {
-		log.Printf("[Batch] 文本分析失败: %s - %v", url, err)
+		log.Printf("[Batch] 分析失败: %s - %v", url, err)
 		project.Status = model.ProjectStatusDraft
 		h.projectRepo.Update(ctx, project)
 		h.batchTaskRepo.IncrementFailedCount(batchID)
 		return
 	}
-	log.Printf("[Batch] 文本分析成功: %s (情绪: %s)", url, analysisResult.Emotion.Primary)
+	log.Printf("[Batch] 分析成功: %s", url)
 
 	// 5. 图片分析（如果有图片且配置了图片 LLM）
 	var imageAnalysisResult *llm.ImageAnalysisResult
@@ -265,7 +280,7 @@ func (h *BatchHandler) processSingleURL(batchID uuid.UUID, userID int64, url str
 		log.Printf("[Batch] 跳过图片分析（未配置图片 LLM）: %s", url)
 	}
 
-	// 6. 合并分析结果
+	// 6. 合并分析结果（同时支持图文分析和视频分析的字段）
 	finalResult := map[string]interface{}{
 		"emotion":        analysisResult.Emotion,
 		"structure":      analysisResult.Structure,
@@ -274,6 +289,18 @@ func (h *BatchHandler) processSingleURL(batchID uuid.UUID, userID int64, url str
 		"tone":           analysisResult.Tone,
 		"word_count":     analysisResult.WordCount,
 	}
+
+	// 视频分析专属字段
+	if contentType == "video" {
+		finalResult["hook_strategy"] = analysisResult.HookStrategy
+		finalResult["narrative_logic"] = analysisResult.NarrativeLogic
+		finalResult["visual_direction"] = analysisResult.VisualDirection
+		finalResult["audio_atmosphere"] = analysisResult.AudioAtmosphere
+		finalResult["ppp_model"] = analysisResult.PPPModel
+		finalResult["viral_mechanics"] = analysisResult.ViralMechanics
+		finalResult["tags_&_seo"] = analysisResult.TagsAndSEO
+	}
+
 	if imageAnalysisResult != nil {
 		finalResult["image_analysis"] = imageAnalysisResult
 	}

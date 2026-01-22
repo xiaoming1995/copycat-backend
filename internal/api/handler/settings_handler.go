@@ -70,11 +70,14 @@ type SaveApiConfigRequest struct {
 	ProviderKeys ProviderApiKeys `json:"provider_keys"`
 }
 
-// SaveModelConfigRequest 保存模型选择请求（模块2：各分析类型的模型）
+// SaveModelConfigRequest 保存模型选择请求（模块2：各分析类型的模型和服务商）
 type SaveModelConfigRequest struct {
-	ContentModel string `json:"content_model"`
-	ImageModel   string `json:"image_model"`
-	VideoModel   string `json:"video_model"`
+	ContentModel    string `json:"content_model"`
+	ContentProvider string `json:"content_provider"`
+	ImageModel      string `json:"image_model"`
+	ImageProvider   string `json:"image_provider"`
+	VideoModel      string `json:"video_model"`
+	VideoProvider   string `json:"video_provider"`
 }
 
 // SaveGenerateConfigRequest 保存生成设置请求（模块3：仿写条数等）
@@ -245,15 +248,31 @@ func (h *SettingsHandler) SaveModelConfig(c *gin.Context) {
 		existing = &model.UserSettings{UserID: userID}
 	}
 
-	// 更新模型
+	// 更新模型和服务商
 	if req.ContentModel != "" {
 		existing.LLMModel = req.ContentModel
+	}
+	if req.ContentProvider != "" {
+		existing.LLMProvider = req.ContentProvider
+		existing.LLMBaseURL = getProviderBaseURL(req.ContentProvider)
+		// 同步 API Key
+		existing.LLMApiKey = getProviderApiKey(existing, req.ContentProvider)
 	}
 	if req.ImageModel != "" {
 		existing.ImageLLMModel = req.ImageModel
 	}
+	if req.ImageProvider != "" {
+		existing.ImageLLMProvider = req.ImageProvider
+		existing.ImageLLMBaseURL = getProviderBaseURL(req.ImageProvider)
+		existing.ImageLLMApiKey = getProviderApiKey(existing, req.ImageProvider)
+	}
 	if req.VideoModel != "" {
 		existing.VideoLLMModel = req.VideoModel
+	}
+	if req.VideoProvider != "" {
+		existing.VideoLLMProvider = req.VideoProvider
+		existing.VideoLLMBaseURL = getProviderBaseURL(req.VideoProvider)
+		existing.VideoLLMApiKey = getProviderApiKey(existing, req.VideoProvider)
 	}
 
 	if err := h.settingsRepo.Upsert(existing); err != nil {
@@ -356,5 +375,29 @@ func getProviderApiKeyByName(settings *model.UserSettings, provider string) stri
 		return settings.AnthropicApiKey
 	default:
 		return ""
+	}
+}
+
+// getProviderBaseURL 根据提供商获取 API Base URL
+func getProviderBaseURL(provider string) string {
+	switch provider {
+	case model.LLMProviderOpenAI:
+		return "https://api.openai.com/v1"
+	case model.LLMProviderDeepSeek:
+		return "https://api.deepseek.com"
+	case model.LLMProviderMoonshot:
+		return "https://api.moonshot.cn/v1"
+	case model.LLMProviderQwen:
+		return "https://dashscope.aliyuncs.com/compatible-mode/v1"
+	case model.LLMProviderHunyuan:
+		return "https://api.hunyuan.cloud.tencent.com/v1"
+	case model.LLMProviderDoubao:
+		return "https://ark.cn-beijing.volces.com/api/v3"
+	case model.LLMProviderZhipu:
+		return "https://open.bigmodel.cn/api/paas/v4"
+	case model.LLMProviderAnthropic:
+		return "https://api.anthropic.com/v1"
+	default:
+		return "https://api.openai.com/v1"
 	}
 }

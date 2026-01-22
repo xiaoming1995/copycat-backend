@@ -14,6 +14,7 @@ type Project struct {
 	BatchTaskID      *uuid.UUID     `gorm:"column:batch_task_id;type:uuid;index;comment:关联批量任务ID(可选)" json:"batch_task_id,omitempty"`
 	SourceURL        string         `gorm:"column:source_url;type:text;comment:原始文案来源URL(小红书/公众号)" json:"source_url"`
 	SourceContent    string         `gorm:"column:source_content;type:text;not null;comment:爬取/输入的原始文案内容" json:"source_content"`
+	ContentType      string         `gorm:"column:content_type;type:varchar(20);default:text;comment:内容类型(text/video/images)" json:"content_type"`
 	AnalysisResult   datatypes.JSON `gorm:"column:analysis_result;type:jsonb;comment:LLM分析结果(情绪/结构/关键词)" json:"analysis_result"`
 	NewTopic         string         `gorm:"column:new_topic;type:varchar(500);comment:用户输入的新主题" json:"new_topic"`
 	GeneratedContent string         `gorm:"column:generated_content;type:text;comment:LLM生成的仿写文案" json:"generated_content"`

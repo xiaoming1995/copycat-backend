@@ -34,9 +34,10 @@ func NewAnalysisHandler(db *gorm.DB) *AnalysisHandler {
 
 // AnalyzeRequest 分析求
 type AnalyzeRequest struct {
-	Title     string `json:"title"`                      // 题
-	Content   string `json:"content" binding:"required"` // 正容
-	ProjectID string `json:"project_id"`                 // 选项目
+	Title       string `json:"title"`                      // 题
+	Content     string `json:"content" binding:"required"` // 正容
+	ProjectID   string `json:"project_id"`                 // 选项目
+	ContentType string `json:"content_type"`               // 内容类型: text/images/video
 }
 
 // AnalyzeImagesRequest 图片分析求
@@ -112,7 +113,18 @@ func (h *AnalysisHandler) Analyze(c *gin.Context) {
 
 	// 调分析
 	log.Printf("[API] 调 LLM 分析...")
-	result, err := client.AnalyzeContent(req.Title, req.Content)
+	log.Printf("   - 内容类型: %s", req.ContentType)
+
+	var result *llm.AnalysisResult
+
+	// 根据内容类型调用不同的分析方法
+	if req.ContentType == "video" {
+		log.Printf("[API] 使用视频专属分析方法")
+		result, err = client.AnalyzeVideoContent(req.Title, req.Content)
+	} else {
+		result, err = client.AnalyzeContent(req.Title, req.Content)
+	}
+
 	if err != nil {
 		log.Printf("[API] 分析: %v", err)
 		response.ServerError(c, "分析: "+err.Error())
@@ -249,24 +261,41 @@ func (h *AnalysisHandler) Generate(c *gin.Context) {
 		generateCount = 10 // 最多10条
 	}
 	log.Printf("   - 生成条数: %d", generateCount)
+	log.Printf("   - 内容类型: %s", project.ContentType)
 
-	generatedContents, err := client.GenerateMultipleContent(originalTitle, project.SourceContent, &analysisResult, req.NewTopic, generateCount)
-	if err != nil {
-		log.Printf("[API] 成: %v", err)
-		response.ServerError(c, "成: "+err.Error())
-		return
+	var generatedContents []string
+
+	// 根据内容类型选择不同的生成方法
+	if project.ContentType == "video" {
+		// 视频类型：生成视频脚本（包含时间线、分镜头、拍摄建议）
+		log.Printf("[API] 使用视频脚本生成方法")
+		generatedContents, err = client.GenerateMultipleVideoScripts(originalTitle, project.SourceContent, &analysisResult, req.NewTopic, generateCount)
+		if err != nil {
+			log.Printf("[API] 视频脚本生成失败: %v", err)
+			response.ServerError(c, "生成失败: "+err.Error())
+			return
+		}
+	} else {
+		// 图文类型：使用原有的仿写生成方法
+		log.Printf("[API] 使用图文仿写生成方法")
+		generatedContents, err = client.GenerateMultipleContent(originalTitle, project.SourceContent, &analysisResult, req.NewTopic, generateCount)
+		if err != nil {
+			log.Printf("[API] 生成失败: %v", err)
+			response.ServerError(c, "生成失败: "+err.Error())
+			return
+		}
 	}
 
-	log.Printf("[API] 成成容条数: %d", len(generatedContents))
+	log.Printf("[API] 生成成功，内容条数: %d", len(generatedContents))
 
-	// 更项目（保存第一条或全部内容）
+	// 更新项目（保存第一条或全部内容）
 	project.NewTopic = req.NewTopic
 	if len(generatedContents) > 0 {
 		project.GeneratedContent = strings.Join(generatedContents, "\n\n===分隔符===\n\n")
 	}
 	project.Status = model.ProjectStatusCompleted
 	h.projectRepo.Update(context.Background(), project)
-	log.Printf("[API] 更项目成")
+	log.Printf("[API] 更新项目成功")
 
 	response.Success(c, gin.H{
 		"generated_contents": generatedContents,
