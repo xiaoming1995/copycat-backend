@@ -32,6 +32,7 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	settingsHandler := handler.NewSettingsHandler(db)
 	analysisHandler := handler.NewAnalysisHandler(db)
 	batchHandler := handler.NewBatchHandler(db, contentService)
+	speechHandler := handler.NewSpeechHandler(db)
 
 	// API v1 路由组
 	v1 := r.Group("/api/v1")
@@ -77,6 +78,11 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 			auth.POST("/batch/analyze", batchHandler.CreateBatchAnalyze)
 			auth.GET("/batch/:id", batchHandler.GetBatchStatus)
 			auth.GET("/batch/list", batchHandler.ListBatchTasks)
+
+			// 语音合成相关
+			auth.POST("/speech/generate", speechHandler.GenerateSpeech)
+			auth.GET("/speech/voices", speechHandler.GetVoices)
+			auth.GET("/speech/models", speechHandler.GetModels)
 		}
 	}
 
