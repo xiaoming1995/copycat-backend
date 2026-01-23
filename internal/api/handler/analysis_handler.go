@@ -141,6 +141,10 @@ func (h *AnalysisHandler) Analyze(c *gin.Context) {
 		if project != nil {
 			project.AnalysisResult = analysisJSON
 			project.Status = model.ProjectStatusAnalyzed
+			// 如果请求中包含 content_type，更新项目类型
+			if req.ContentType != "" {
+				project.ContentType = req.ContentType
+			}
 			h.projectRepo.Update(context.Background(), project)
 			log.Printf("[API] 更项目分析: %s", req.ProjectID)
 		}

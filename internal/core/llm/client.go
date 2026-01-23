@@ -408,6 +408,12 @@ func (c *Client) ChatWithImages(text string, imageURLs []string) (string, error)
 		content = chatResp.Choices[0].Message.ReasoningContent
 	}
 
+	if content == "" {
+		log.Printf("[LLM] content 和 reasoning_content 都为空")
+		log.Printf("   - 原始响应: %s", string(body))
+		return "", fmt.Errorf("LLM 返回内容为空")
+	}
+
 	log.Printf("[LLM] 多模态调用成功:")
 	if chatResp.Usage != nil {
 		log.Printf("   - Token 使用: prompt=%d, completion=%d, total=%d",
