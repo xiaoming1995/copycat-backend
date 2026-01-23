@@ -11,6 +11,7 @@ import (
 	"copycat/internal/core/llm"
 	"copycat/internal/model"
 	"copycat/internal/repository"
+	"copycat/pkg/logger"
 	"copycat/pkg/response"
 
 	"github.com/gin-gonic/gin"
@@ -232,7 +233,7 @@ func (h *BatchHandler) processSingleURL(batchID uuid.UUID, userID int64, url str
 	}
 
 	// 4. 调用 LLM 分析（根据内容类型选择不同分析方式）
-	log.Printf("[Batch] 开始分析: %s (类型: %s)", url, contentType)
+	logger.LLMInfo("[Batch] 开始分析: %s (类型: %s)", url, contentType)
 	textClient := llm.NewClient(llm.Config{
 		Provider: settings.LLMProvider,
 		ApiKey:   settings.LLMApiKey,
@@ -249,18 +250,18 @@ func (h *BatchHandler) processSingleURL(batchID uuid.UUID, userID int64, url str
 		analysisResult, err = textClient.AnalyzeContent(title, content)
 	}
 	if err != nil {
-		log.Printf("[Batch] 分析失败: %s - %v", url, err)
+		logger.LLMError("[Batch] 分析失败: %s - %v", url, err)
 		project.Status = model.ProjectStatusDraft
 		h.projectRepo.Update(ctx, project)
 		h.batchTaskRepo.IncrementFailedCount(batchID)
 		return
 	}
-	log.Printf("[Batch] 分析成功: %s", url)
+	logger.LLMInfo("[Batch] 分析成功: %s", url)
 
 	// 5. 图片分析（如果有图片且配置了图片 LLM）
 	var imageAnalysisResult *llm.ImageAnalysisResult
 	if len(images) > 0 && settings.ImageLLMApiKey != "" {
-		log.Printf("[Batch] 开始图片分析: %s (图片数: %d)", url, len(images))
+		logger.LLMInfo("[Batch] 开始图片分析: %s (图片数: %d)", url, len(images))
 
 		imageClient := llm.NewClient(llm.Config{
 			Provider: settings.ImageLLMProvider,
@@ -271,13 +272,13 @@ func (h *BatchHandler) processSingleURL(batchID uuid.UUID, userID int64, url str
 
 		imageAnalysisResult, err = imageClient.AnalyzeImages(images)
 		if err != nil {
-			log.Printf("[Batch] 图片分析失败（继续保存文本分析）: %s - %v", url, err)
+			logger.LLMError("[Batch] 图片分析失败（继续保存文本分析）: %s - %v", url, err)
 			// 图片分析失败不影响整体，继续保存文本分析结果
 		} else {
-			log.Printf("[Batch] 图片分析成功: %s (分析图片数: %d)", url, len(imageAnalysisResult.Images))
+			logger.LLMInfo("[Batch] 图片分析成功: %s (分析图片数: %d)", url, len(imageAnalysisResult.Images))
 		}
 	} else if len(images) > 0 {
-		log.Printf("[Batch] 跳过图片分析（未配置图片 LLM）: %s", url)
+		logger.LLMInfo("[Batch] 跳过图片分析（未配置图片 LLM）: %s", url)
 	}
 
 	// 6. 合并分析结果（同时支持图文分析和视频分析的字段）

@@ -3,10 +3,11 @@ package llm
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"copycat/pkg/logger"
 )
 
 // 提示词文件路径
@@ -249,29 +250,29 @@ func loadPrompt(filename string, defaultPrompt string) string {
 	content, err := os.ReadFile(promptPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Printf("[Prompt] 提示词文件不存在: %s，使用默认模板", promptPath)
+			logger.LLMInfo("[Prompt] 提示词文件不存在: %s，使用默认模板", promptPath)
 		} else {
-			log.Printf("[Prompt] 读取提示词文件失败: %v，使用默认模板", err)
+			logger.LLMWarn("[Prompt] 读取提示词文件失败: %v，使用默认模板", err)
 		}
 		return defaultPrompt
 	}
 
-	log.Printf("[Prompt] 已加载提示词文件: %s (%d 字符)", promptPath, len(content))
+	logger.LLMInfo("[Prompt] 已加载提示词文件: %s (%d 字符)", promptPath, len(content))
 	return string(content)
 }
 
 // AnalyzeContent 分析爆款内容
 func (c *Client) AnalyzeContent(title, content string) (*AnalysisResult, error) {
-	log.Printf("[LLM Service] 开始分析内容 (标题: %d 字, 正文: %d 字)", len(title), len(content))
+	logger.LLMInfo("[LLM Service] 开始分析内容 (标题: %d 字, 正文: %d 字)", len(title), len(content))
 
 	if title != "" {
-		log.Printf("   - 标题: %s", title)
+		logger.LLMInfo("   - 标题: %s", title)
 	}
 	contentPreview := content
 	if len(contentPreview) > 100 {
 		contentPreview = contentPreview[:100] + "..."
 	}
-	log.Printf("   - 内容预览: %s", strings.ReplaceAll(contentPreview, "\n", " "))
+	logger.LLMInfo("   - 内容预览: %s", strings.ReplaceAll(contentPreview, "\n", " "))
 
 	// 从文件加载提示词模板
 	promptTemplate := loadPrompt(AnalyzePromptFile, defaultAnalyzePrompt)
@@ -286,53 +287,53 @@ func (c *Client) AnalyzeContent(title, content string) (*AnalysisResult, error) 
 
 	response, err := c.Chat(messages)
 	if err != nil {
-		log.Printf("[LLM Service] 分析失败: %v", err)
+		logger.LLMInfo("[LLM Service] 分析失败: %v", err)
 		return nil, fmt.Errorf("调用 LLM 失败: %w", err)
 	}
 
 	// 尝试提取 JSON
 	jsonStr := extractJSON(response)
-	log.Printf("[LLM Service] 提取的 JSON (长度: %d):", len(jsonStr))
+	logger.LLMInfo("[LLM Service] 提取的 JSON (长度: %d):", len(jsonStr))
 	jsonPreview := jsonStr
 	if len(jsonPreview) > 500 {
 		jsonPreview = jsonPreview[:500] + "..."
 	}
-	log.Printf("   %s", strings.ReplaceAll(jsonPreview, "\n", " "))
+	logger.LLMInfo("   %s", strings.ReplaceAll(jsonPreview, "\n", " "))
 
 	var result AnalysisResult
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
-		log.Printf("[LLM Service] JSON 解析失败: %v", err)
-		log.Printf("   原始响应: %s", response)
+		logger.LLMInfo("[LLM Service] JSON 解析失败: %v", err)
+		logger.LLMInfo("   原始响应: %s", response)
 		return nil, fmt.Errorf("解析分析结果失败: %w, 原始响应: %s", err, response)
 	}
 
-	log.Printf("[LLM Service] 分析成功:")
+	logger.LLMInfo("[LLM Service] 分析成功:")
 	if result.TitleAnalysis != nil {
-		log.Printf("   - 标题评分: %.1f/10", result.TitleAnalysis.Score)
-		log.Printf("   - 标题技巧: %v", result.TitleAnalysis.Techniques)
+		logger.LLMInfo("   - 标题评分: %.1f/10", result.TitleAnalysis.Score)
+		logger.LLMInfo("   - 标题技巧: %v", result.TitleAnalysis.Techniques)
 	}
-	log.Printf("   - 主要情绪: %s (强度: %.2f)", result.Emotion.Primary, result.Emotion.Intensity)
-	log.Printf("   - 情绪标签: %v", result.Emotion.Tags)
-	log.Printf("   - 结构段落: %d 个", len(result.Structure))
-	log.Printf("   - 关键词: %v", result.Keywords)
-	log.Printf("   - 语气风格: %s", result.Tone)
-	log.Printf("   - 字数统计: %d", result.WordCount)
+	logger.LLMInfo("   - 主要情绪: %s (强度: %.2f)", result.Emotion.Primary, result.Emotion.Intensity)
+	logger.LLMInfo("   - 情绪标签: %v", result.Emotion.Tags)
+	logger.LLMInfo("   - 结构段落: %d 个", len(result.Structure))
+	logger.LLMInfo("   - 关键词: %v", result.Keywords)
+	logger.LLMInfo("   - 语气风格: %s", result.Tone)
+	logger.LLMInfo("   - 字数统计: %d", result.WordCount)
 
 	return &result, nil
 }
 
 // AnalyzeVideoContent 视频内容分析（包含开头钩子、金句、叙事、人货场、人设、爆款逻辑）
 func (c *Client) AnalyzeVideoContent(title, content string) (*AnalysisResult, error) {
-	log.Printf("[LLM Service] 开始视频内容分析 (标题: %d 字, 正文: %d 字)", len(title), len(content))
+	logger.LLMInfo("[LLM Service] 开始视频内容分析 (标题: %d 字, 正文: %d 字)", len(title), len(content))
 
 	if title != "" {
-		log.Printf("   - 标题: %s", title)
+		logger.LLMInfo("   - 标题: %s", title)
 	}
 	contentPreview := content
 	if len(contentPreview) > 100 {
 		contentPreview = contentPreview[:100] + "..."
 	}
-	log.Printf("   - 内容预览: %s", strings.ReplaceAll(contentPreview, "\n", " "))
+	logger.LLMInfo("   - 内容预览: %s", strings.ReplaceAll(contentPreview, "\n", " "))
 
 	// 从文件加载视频分析提示词模板
 	promptTemplate := loadPrompt("analyze_video.txt", defaultAnalyzePrompt)
@@ -347,42 +348,42 @@ func (c *Client) AnalyzeVideoContent(title, content string) (*AnalysisResult, er
 
 	response, err := c.Chat(messages)
 	if err != nil {
-		log.Printf("[LLM Service] 视频分析失败: %v", err)
+		logger.LLMInfo("[LLM Service] 视频分析失败: %v", err)
 		return nil, fmt.Errorf("调用 LLM 失败: %w", err)
 	}
 
 	// 尝试提取 JSON
 	jsonStr := extractJSON(response)
-	log.Printf("[LLM Service] 提取的 JSON (长度: %d)", len(jsonStr))
+	logger.LLMInfo("[LLM Service] 提取的 JSON (长度: %d)", len(jsonStr))
 
 	var result AnalysisResult
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
-		log.Printf("[LLM Service] JSON 解析失败: %v", err)
-		log.Printf("   原始响应: %s", response)
+		logger.LLMInfo("[LLM Service] JSON 解析失败: %v", err)
+		logger.LLMInfo("   原始响应: %s", response)
 		return nil, fmt.Errorf("解析分析结果失败: %w, 原始响应: %s", err, response)
 	}
 
-	log.Printf("[LLM Service] 视频分析成功:")
+	logger.LLMInfo("[LLM Service] 视频分析成功:")
 	if result.TitleAnalysis != nil {
-		log.Printf("   - 标题评分: %.1f/10", result.TitleAnalysis.Score)
+		logger.LLMInfo("   - 标题评分: %.1f/10", result.TitleAnalysis.Score)
 	}
 	if result.Hook != nil {
-		log.Printf("   - 开头钩子: %s (%s)", result.Hook.Type, result.Hook.Duration)
+		logger.LLMInfo("   - 开头钩子: %s (%s)", result.Hook.Type, result.Hook.Duration)
 	}
 	if len(result.GoldenQuotes) > 0 {
-		log.Printf("   - 金句数量: %d", len(result.GoldenQuotes))
+		logger.LLMInfo("   - 金句数量: %d", len(result.GoldenQuotes))
 	}
 	if result.Narrative != nil {
-		log.Printf("   - 叙事结构: %s", result.Narrative.Structure)
+		logger.LLMInfo("   - 叙事结构: %s", result.Narrative.Structure)
 	}
 	if result.PPP != nil {
-		log.Printf("   - 人货场: 人物=%s", result.PPP.People)
+		logger.LLMInfo("   - 人货场: 人物=%s", result.PPP.People)
 	}
 	if result.Persona != nil {
-		log.Printf("   - 人设类型: %s", result.Persona.Type)
+		logger.LLMInfo("   - 人设类型: %s", result.Persona.Type)
 	}
 	if result.ViralLogic != nil {
-		log.Printf("   - 爆款核心: %s", result.ViralLogic.Core)
+		logger.LLMInfo("   - 爆款核心: %s", result.ViralLogic.Core)
 	}
 
 	return &result, nil
@@ -390,10 +391,10 @@ func (c *Client) AnalyzeVideoContent(title, content string) (*AnalysisResult, er
 
 // GenerateContent 生成仿写文案
 func (c *Client) GenerateContent(originalTitle, originalContent string, analysisResult *AnalysisResult, newTopic string) (string, error) {
-	log.Printf("[LLM Service] 开始生成仿写文案")
-	log.Printf("   - 新主题: %s", newTopic)
-	log.Printf("   - 原标题: %s", originalTitle)
-	log.Printf("   - 原文长度: %d 字", len(originalContent))
+	logger.LLMInfo("[LLM Service] 开始生成仿写文案")
+	logger.LLMInfo("   - 新主题: %s", newTopic)
+	logger.LLMInfo("   - 原标题: %s", originalTitle)
+	logger.LLMInfo("   - 原文长度: %d 字", len(originalContent))
 
 	analysisJSON, _ := json.MarshalIndent(analysisResult, "", "  ")
 
@@ -412,27 +413,27 @@ func (c *Client) GenerateContent(originalTitle, originalContent string, analysis
 
 	response, err := c.Chat(messages)
 	if err != nil {
-		log.Printf("[LLM Service] 生成失败: %v", err)
+		logger.LLMInfo("[LLM Service] 生成失败: %v", err)
 		return "", fmt.Errorf("调用 LLM 失败: %w", err)
 	}
 
 	result := strings.TrimSpace(response)
-	log.Printf("[LLM Service] 生成成功 (长度: %d 字符)", len(result))
+	logger.LLMInfo("[LLM Service] 生成成功 (长度: %d 字符)", len(result))
 	resultPreview := result
 	if len(resultPreview) > 200 {
 		resultPreview = resultPreview[:200] + "..."
 	}
-	log.Printf("   - 生成内容预览: %s", strings.ReplaceAll(resultPreview, "\n", " "))
+	logger.LLMInfo("   - 生成内容预览: %s", strings.ReplaceAll(resultPreview, "\n", " "))
 
 	return result, nil
 }
 
 // GenerateVideoScript 生成视频脚本仿写（包含时间线、分镜头、拍摄建议）
 func (c *Client) GenerateVideoScript(originalTitle, originalContent string, analysisResult *AnalysisResult, newTopic string) (string, error) {
-	log.Printf("[LLM Service] 开始生成视频脚本仿写")
-	log.Printf("   - 新主题: %s", newTopic)
-	log.Printf("   - 原标题: %s", originalTitle)
-	log.Printf("   - 原文长度: %d 字", len(originalContent))
+	logger.LLMInfo("[LLM Service] 开始生成视频脚本仿写")
+	logger.LLMInfo("   - 新主题: %s", newTopic)
+	logger.LLMInfo("   - 原标题: %s", originalTitle)
+	logger.LLMInfo("   - 原文长度: %d 字", len(originalContent))
 
 	analysisJSON, _ := json.MarshalIndent(analysisResult, "", "  ")
 
@@ -451,17 +452,17 @@ func (c *Client) GenerateVideoScript(originalTitle, originalContent string, anal
 
 	response, err := c.Chat(messages)
 	if err != nil {
-		log.Printf("[LLM Service] 视频脚本生成失败: %v", err)
+		logger.LLMInfo("[LLM Service] 视频脚本生成失败: %v", err)
 		return "", fmt.Errorf("调用 LLM 失败: %w", err)
 	}
 
 	result := strings.TrimSpace(response)
-	log.Printf("[LLM Service] 视频脚本生成成功 (长度: %d 字符)", len(result))
+	logger.LLMInfo("[LLM Service] 视频脚本生成成功 (长度: %d 字符)", len(result))
 	resultPreview := result
 	if len(resultPreview) > 300 {
 		resultPreview = resultPreview[:300] + "..."
 	}
-	log.Printf("   - 生成脚本预览: %s", strings.ReplaceAll(resultPreview, "\n", " "))
+	logger.LLMInfo("   - 生成脚本预览: %s", strings.ReplaceAll(resultPreview, "\n", " "))
 
 	return result, nil
 }
@@ -472,31 +473,31 @@ func (c *Client) GenerateMultipleVideoScripts(originalTitle, originalContent str
 		count = 1
 	}
 
-	log.Printf("[LLM Service] 开始生成多条视频脚本 (目标条数: %d)", count)
-	log.Printf("   - 新主题: %s", newTopic)
-	log.Printf("   - 原标题: %s", originalTitle)
+	logger.LLMInfo("[LLM Service] 开始生成多条视频脚本 (目标条数: %d)", count)
+	logger.LLMInfo("   - 新主题: %s", newTopic)
+	logger.LLMInfo("   - 原标题: %s", originalTitle)
 
 	results := make([]string, 0, count)
 
 	// 逐条生成，避免单次请求输出过多导致超时
 	for i := 0; i < count; i++ {
-		log.Printf("[LLM Service] 正在生成第 %d/%d 条视频脚本...", i+1, count)
+		logger.LLMInfo("[LLM Service] 正在生成第 %d/%d 条视频脚本...", i+1, count)
 
 		content, err := c.GenerateVideoScript(originalTitle, originalContent, analysisResult, newTopic)
 		if err != nil {
-			log.Printf("[LLM Service] 生成第 %d 条失败: %v", i+1, err)
+			logger.LLMInfo("[LLM Service] 生成第 %d 条失败: %v", i+1, err)
 			// 如果已经有结果了，返回已有的；否则返回错误
 			if len(results) > 0 {
-				log.Printf("[LLM Service] 返回已生成的 %d 条结果", len(results))
+				logger.LLMInfo("[LLM Service] 返回已生成的 %d 条结果", len(results))
 				return results, nil
 			}
 			return nil, err
 		}
 		results = append(results, content)
-		log.Printf("[LLM Service] 成功生成第 %d/%d 条", i+1, count)
+		logger.LLMInfo("[LLM Service] 成功生成第 %d/%d 条", i+1, count)
 	}
 
-	log.Printf("[LLM Service] 多条视频脚本生成完成 (实际条数: %d)", len(results))
+	logger.LLMInfo("[LLM Service] 多条视频脚本生成完成 (实际条数: %d)", len(results))
 	return results, nil
 }
 
@@ -511,9 +512,9 @@ func (c *Client) GenerateMultipleContent(originalTitle, originalContent string, 
 		return []string{content}, nil
 	}
 
-	log.Printf("[LLM Service] 开始生成多条仿写文案 (条数: %d)", count)
-	log.Printf("   - 新主题: %s", newTopic)
-	log.Printf("   - 原标题: %s", originalTitle)
+	logger.LLMInfo("[LLM Service] 开始生成多条仿写文案 (条数: %d)", count)
+	logger.LLMInfo("   - 新主题: %s", newTopic)
+	logger.LLMInfo("   - 原标题: %s", originalTitle)
 
 	analysisJSON, _ := json.MarshalIndent(analysisResult, "", "  ")
 
@@ -541,7 +542,7 @@ func (c *Client) GenerateMultipleContent(originalTitle, originalContent string, 
 
 	response, err := c.Chat(messages)
 	if err != nil {
-		log.Printf("[LLM Service] 多条生成失败: %v", err)
+		logger.LLMInfo("[LLM Service] 多条生成失败: %v", err)
 		return nil, fmt.Errorf("调用 LLM 失败: %w", err)
 	}
 
@@ -555,7 +556,7 @@ func (c *Client) GenerateMultipleContent(originalTitle, originalContent string, 
 		}
 	}
 
-	log.Printf("[LLM Service] 多条生成成功 (实际条数: %d)", len(results))
+	logger.LLMInfo("[LLM Service] 多条生成成功 (实际条数: %d)", len(results))
 	return results, nil
 }
 
@@ -620,9 +621,9 @@ func (c *Client) AnalyzeImages(imageURLs []string) (*ImageAnalysisResult, error)
 		return nil, fmt.Errorf("没有提供图片")
 	}
 
-	log.Printf("[LLM Service] 开始分析图片 (数量: %d)", len(imageURLs))
+	logger.LLMInfo("[LLM Service] 开始分析图片 (数量: %d)", len(imageURLs))
 	for i, url := range imageURLs {
-		log.Printf("   - 图片 %d: %s", i+1, url)
+		logger.LLMInfo("   - 图片 %d: %s", i+1, url)
 	}
 
 	// 从文件加载提示词模板
@@ -631,25 +632,25 @@ func (c *Client) AnalyzeImages(imageURLs []string) (*ImageAnalysisResult, error)
 	// 调用多模态接口
 	response, err := c.ChatWithImages(promptTemplate, imageURLs)
 	if err != nil {
-		log.Printf("[LLM Service] 图片分析失败: %v", err)
+		logger.LLMInfo("[LLM Service] 图片分析失败: %v", err)
 		return nil, fmt.Errorf("调用多模态 LLM 失败: %w", err)
 	}
 
 	// 提取 JSON
 	jsonStr := extractJSON(response)
-	log.Printf("[LLM Service] 图片分析 JSON (长度: %d)", len(jsonStr))
+	logger.LLMInfo("[LLM Service] 图片分析 JSON (长度: %d)", len(jsonStr))
 
 	var result ImageAnalysisResult
 	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
-		log.Printf("[LLM Service] 图片分析 JSON 解析失败: %v", err)
-		log.Printf("   原始响应: %s", response)
+		logger.LLMInfo("[LLM Service] 图片分析 JSON 解析失败: %v", err)
+		logger.LLMInfo("   原始响应: %s", response)
 		return nil, fmt.Errorf("解析图片分析结果失败: %w", err)
 	}
 
-	log.Printf("[LLM Service] 图片分析成功:")
-	log.Printf("   - 分析图片数量: %d", len(result.Images))
-	log.Printf("   - 整体风格: %s", result.OverallStyle)
-	log.Printf("   - 视觉策略: %s", result.VisualStrategy)
+	logger.LLMInfo("[LLM Service] 图片分析成功:")
+	logger.LLMInfo("   - 分析图片数量: %d", len(result.Images))
+	logger.LLMInfo("   - 整体风格: %s", result.OverallStyle)
+	logger.LLMInfo("   - 视觉策略: %s", result.VisualStrategy)
 
 	return &result, nil
 }

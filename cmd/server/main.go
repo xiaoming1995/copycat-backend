@@ -17,12 +17,18 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// 2. 初始化文件日志
-	logDir := "logs"
-	if err := logger.InitFileLogger(logDir, logger.DEBUG); err != nil {
-		log.Printf("初始化文件日志失败: %v，继续使用控制台日志", err)
+	// 2. 初始化文件日志（API 日志）
+	apiLogDir := "logs/api"
+	if err := logger.InitFileLogger(apiLogDir, logger.DEBUG); err != nil {
+		log.Printf("初始化 API 日志失败: %v，继续使用控制台日志", err)
 	} else {
 		defer logger.Close()
+	}
+
+	// 3. 初始化 LLM 日志
+	llmLogDir := "logs/llm"
+	if err := logger.InitLLMLogger(llmLogDir, logger.DEBUG); err != nil {
+		log.Printf("初始化 LLM 日志失败: %v，继续使用控制台日志", err)
 	}
 
 	log.Printf("Starting %s in %s mode...", cfg.App.Name, cfg.App.Env)
@@ -45,7 +51,7 @@ func main() {
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
 	log.Printf("Server listening on http://localhost%s", addr)
 	log.Printf("API Documentation: http://localhost%s/api/v1", addr)
-	log.Printf("日志文件: %s", logger.GetLogFilePath(logDir))
+	log.Printf("API 日志文件: %s", logger.GetLogFilePath(apiLogDir))
 
 	if err := r.Run(addr); err != nil {
 		log.Fatalf("Failed to start server: %v", err)

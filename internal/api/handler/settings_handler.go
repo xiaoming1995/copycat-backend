@@ -49,6 +49,7 @@ type MultiModalConfigResponse struct {
 	VideoAnalysis   LLMConfigItem   `json:"video_analysis"`
 	ProviderKeys    ProviderApiKeys `json:"provider_keys"`
 	GenerateCount   int             `json:"generate_count"`
+	DefaultTaskType string          `json:"default_task_type"`
 }
 
 // === 请求结构体 ===
@@ -83,6 +84,11 @@ type SaveModelConfigRequest struct {
 // SaveGenerateConfigRequest 保存生成设置请求（模块3：仿写条数等）
 type SaveGenerateConfigRequest struct {
 	GenerateCount int `json:"generate_count"`
+}
+
+// SaveTaskTypeRequest 保存任务类型请求
+type SaveTaskTypeRequest struct {
+	TaskType string `json:"task_type"`
 }
 
 // GetLLMConfig 获取 LLM 配置
@@ -149,7 +155,8 @@ func (h *SettingsHandler) GetLLMConfig(c *gin.Context) {
 			Zhipu:     maskApiKey(settings.ZhipuApiKey),
 			Anthropic: maskApiKey(settings.AnthropicApiKey),
 		},
-		GenerateCount: settings.GenerateCount,
+		GenerateCount:   settings.GenerateCount,
+		DefaultTaskType: settings.DefaultTaskType,
 	})
 }
 
@@ -323,6 +330,39 @@ func (h *SettingsHandler) SaveGenerateConfig(c *gin.Context) {
 	}
 
 	response.Success(c, gin.H{"message": "生成设置保存成功"})
+}
+
+// SaveTaskType 保存任务类型偏好
+func (h *SettingsHandler) SaveTaskType(c *gin.Context) {
+	userID := c.GetInt64("userID")
+	if userID == 0 {
+		response.Unauthorized(c, "请先登录")
+		return
+	}
+
+	var req SaveTaskTypeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, "参数错误: "+err.Error())
+		return
+	}
+
+	// 获取现有配置
+	existing, _ := h.settingsRepo.GetByUserID(userID)
+	if existing == nil {
+		existing = &model.UserSettings{UserID: userID}
+	}
+
+	// 更新
+	if req.TaskType != "" {
+		existing.DefaultTaskType = req.TaskType
+	}
+
+	if err := h.settingsRepo.Upsert(existing); err != nil {
+		response.ServerError(c, "保存配置失败")
+		return
+	}
+
+	response.Success(c, gin.H{"message": "任务偏好保存成功"})
 }
 
 // maskApiKey 脱敏 API Key

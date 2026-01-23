@@ -16,6 +16,7 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 
 	// 全局中间件
 	r.Use(middleware.CORSMiddleware())
+	r.Use(middleware.LoggerMiddleware())
 
 	// 初始化仓库
 	userRepo := repository.NewUserRepository(db)
@@ -65,6 +66,7 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 			auth.POST("/settings/api-config", settingsHandler.SaveApiConfig)           // 模块1: API 配置
 			auth.POST("/settings/model-config", settingsHandler.SaveModelConfig)       // 模块2: 模型选择
 			auth.POST("/settings/generate-config", settingsHandler.SaveGenerateConfig) // 模块3: 生成设置
+			auth.POST("/settings/task-type", settingsHandler.SaveTaskType)             // 新增: 任务类型偏好
 
 			// 分析与生成相关
 			auth.POST("/analyze", analysisHandler.Analyze)

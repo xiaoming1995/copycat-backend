@@ -9,6 +9,7 @@ import (
 	"copycat/internal/core/llm"
 	"copycat/internal/model"
 	"copycat/internal/repository"
+	"copycat/pkg/logger"
 	"copycat/pkg/response"
 
 	"github.com/gin-gonic/gin"
@@ -99,9 +100,9 @@ func (h *AnalysisHandler) Analyze(c *gin.Context) {
 	}
 
 	log.Printf("[API] 到置:")
-	log.Printf("   - Provider: %s", settings.LLMProvider)
-	log.Printf("   - Model: %s", settings.LLMModel)
-	log.Printf("   - BaseURL: %s", settings.LLMBaseURL)
+	logger.LLMInfo("Provider: %s", settings.LLMProvider)
+	logger.LLMInfo("Model: %s", settings.LLMModel)
+	logger.LLMInfo("BaseURL: %s", settings.LLMBaseURL)
 
 	// 创建 LLM 客端
 	client := llm.NewClient(llm.Config{
@@ -112,8 +113,7 @@ func (h *AnalysisHandler) Analyze(c *gin.Context) {
 	})
 
 	// 调分析
-	log.Printf("[API] 调 LLM 分析...")
-	log.Printf("   - 内容类型: %s", req.ContentType)
+	logger.LLMInfo("调 LLM 分析, 内容类型: %s", req.ContentType)
 
 	var result *llm.AnalysisResult
 
@@ -131,7 +131,7 @@ func (h *AnalysisHandler) Analyze(c *gin.Context) {
 		return
 	}
 
-	log.Printf("[API] 分析成绪: %s", result.Emotion.Primary)
+	logger.LLMInfo("分析成绪: %s", result.Emotion.Primary)
 
 	// 项目更项目分析
 	if req.ProjectID != "" {
@@ -218,8 +218,8 @@ func (h *AnalysisHandler) Generate(c *gin.Context) {
 	}
 
 	log.Printf("[API] 到置:")
-	log.Printf("   - Provider: %s", settings.LLMProvider)
-	log.Printf("   - Model: %s", settings.LLMModel)
+	logger.LLMInfo("Provider: %s", settings.LLMProvider)
+	logger.LLMInfo("Model: %s", settings.LLMModel)
 
 	// 解析分析
 	var analysisResult llm.AnalysisResult
@@ -245,7 +245,7 @@ func (h *AnalysisHandler) Generate(c *gin.Context) {
 	})
 
 	// 调成
-	log.Printf("[API] 调 LLM 成...")
+	logger.LLMInfo("调 LLM 成...")
 	// 从分析题
 	originalTitle := ""
 	if analysisResult.TitleAnalysis != nil {
@@ -376,7 +376,7 @@ func (h *AnalysisHandler) AnalyzeImages(c *gin.Context) {
 	})
 
 	// 调图片分析
-	log.Printf("[API] 调 LLM 分析图片...")
+	logger.LLMInfo("调 LLM 分析图片, 图片数: %d", len(req.Images))
 	result, err := client.AnalyzeImages(req.Images)
 	if err != nil {
 		log.Printf("[API] 图片分析: %v", err)

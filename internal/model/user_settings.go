@@ -38,7 +38,8 @@ type UserSettings struct {
 	AnthropicApiKey string `gorm:"column:anthropic_api_key;type:varchar(500);comment:Anthropic API密钥" json:"anthropic_api_key"`
 
 	// 仿写生成配置
-	GenerateCount int `gorm:"column:generate_count;default:1;comment:一次生成的仿写条数(1-10)" json:"generate_count"`
+	DefaultTaskType string `gorm:"column:default_task_type;type:varchar(50);default:contentAnalysis;comment:默认选中的任务类型" json:"default_task_type"`
+	GenerateCount   int    `gorm:"column:generate_count;default:1;comment:一次生成的仿写条数(1-10)" json:"generate_count"`
 
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime;comment:创建时间" json:"created_at"`
 	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime;comment:更新时间" json:"updated_at"`
